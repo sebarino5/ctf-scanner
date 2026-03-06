@@ -11,7 +11,7 @@ from flask import Flask, render_template_string, request, jsonify
 from ctf_scanner.directory_scan import run_directory_scan
 from ctf_scanner.port_scan import run_nmap_scan
 from ctf_scanner.report_md import write_markdown_report
-from ctf_scanner.target_normalization import normalize_targets
+from ctf_scanner.target_normalization import normalize_targets, make_output_dir
 
 app = Flask(__name__)
 
@@ -144,6 +144,56 @@ HTML = """
       margin: 1rem 0 0.5rem;
       font-size: 0.95rem;
     }
+    .cmd-box {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.82rem;
+      color: #79c0ff;
+      word-break: break-all;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+    .cmd-text { flex: 1; }
+    .copy-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 0.78rem;
+      padding: 0.2rem 0.5rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { background: #30363d; color: #c9d1d9; }
+    .copy-btn.copied { color: #3fb950; border-color: #3fb950; }
+    .os-badge {
+      display: inline-block;
+      background: #1a2740;
+      color: #79c0ff;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      padding: 0.15rem 0.5rem;
+      margin: 0.1rem 0 0.5rem;
+    }
+    .scripts-section { margin-top: 0.8rem; }
+    .script-header {
+      color: #8b949e;
+      font-size: 0.8rem;
+      margin: 0.5rem 0 0.2rem;
+    }
+    .script-output {
+      background: #0d1117;
+      border-left: 2px solid #30363d;
+      color: #c9d1d9;
+      font-size: 0.78rem;
+      padding: 0.4rem 0.6rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
@@ -178,7 +228,13 @@ HTML = """
   </div>
 
   <div class="card" id="results">
-    <div class="section-title">Port Scan</div>
+    <div class="section-title">Verwendeter Befehl</div>
+    <div class="cmd-box">
+      <span class="cmd-text" id="cmdText"></span>
+      <button class="copy-btn" id="copyBtn" onclick="copyCommand()">Kopieren</button>
+    </div>
+
+    <div class="section-title" style="margin-top:1.2rem">Port Scan</div>
     <div id="portResults"></div>
 
     <div class="section-title" style="margin-top:1.2rem">Directory Scan</div>
@@ -221,22 +277,39 @@ function pollStatus() {
 }
 
 function renderResults(result) {
+  // Command
+  const cmd = result.command || '';
+  document.getElementById('cmdText').textContent = cmd;
+
   // Port results
   let portHtml = '';
   if (!result.hosts || result.hosts.length === 0) {
     portHtml = '<p class="empty">Keine Hosts gefunden.</p>';
   } else {
     for (const host of result.hosts) {
-      portHtml += `<p class="host-header">Host: ${host.host} <span class="badge open">${host.state}</span></p>`;
+      portHtml += `<p class="host-header">Host: ${esc(host.host)} <span class="badge open">${esc(host.state)}</span></p>`;
+      if (host.os_matches && host.os_matches.length > 0) {
+        portHtml += host.os_matches.map(o => `<span class="os-badge">OS: ${esc(o)}</span>`).join(' ');
+      }
       if (!host.open_ports || host.open_ports.length === 0) {
         portHtml += '<p class="empty">Keine offenen Ports gefunden.</p>';
       } else {
         portHtml += '<table><tr><th>Port</th><th>Proto</th><th>Service</th><th>Produkt/Version</th></tr>';
         for (const p of host.open_ports) {
-          const pv = [p.product, p.version].filter(Boolean).join(' ') || '-';
-          portHtml += `<tr><td>${p.port}</td><td>${p.protocol}</td><td>${p.service}</td><td>${pv}</td></tr>`;
+          const pv = esc([p.product, p.version].filter(Boolean).join(' ') || '-');
+          portHtml += `<tr><td>${p.port}</td><td>${esc(p.protocol)}</td><td>${esc(p.service)}</td><td>${pv}</td></tr>`;
         }
         portHtml += '</table>';
+
+        const allScripts = host.open_ports.flatMap(p => (p.scripts || []).map(s => ({port: p.port, proto: p.protocol, ...s})));
+        if (allScripts.length > 0) {
+          portHtml += '<div class="scripts-section">';
+          for (const s of allScripts) {
+            portHtml += `<p class="script-header">${s.port}/${esc(s.proto)} &mdash; ${esc(s.id)}</p>`;
+            portHtml += `<pre class="script-output">${esc(s.output)}</pre>`;
+          }
+          portHtml += '</div>';
+        }
       }
     }
   }
@@ -250,12 +323,26 @@ function renderResults(result) {
     dirHtml = '<table><tr><th>URL</th><th>Status</th><th>Redirect</th></tr>';
     for (const f of result.dir_findings) {
       const cls = 's' + f.status_code;
-      dirHtml += `<tr><td>${f.url}</td><td><span class="badge ${cls}">${f.status_code}</span></td><td>${f.location || '-'}</td></tr>`;
+      dirHtml += `<tr><td>${esc(f.url)}</td><td><span class="badge ${cls}">${f.status_code}</span></td><td>${esc(f.location || '-')}</td></tr>`;
     }
     dirHtml += '</table>';
   }
   document.getElementById('dirResults').innerHTML = dirHtml;
   document.getElementById('results').style.display = 'block';
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyCommand() {
+  const text = document.getElementById('cmdText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Kopiert!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Kopieren'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
@@ -269,18 +356,19 @@ function re() { document.getElementById('scanBtn').disabled = false; }
 def _do_scan(target: str, profile: str, ports_mode: str) -> None:
     try:
         normalized = normalize_targets([target])
+        output_dir = make_output_dir(Path("outputs"), normalized)
         nmap_result = run_nmap_scan(
             targets=[t.for_nmap for t in normalized],
             profiles=[profile],
             ports_mode=ports_mode,
             custom_ports=None,
-            output_dir=Path("outputs"),
+            output_dir=output_dir,
         )
         dir_targets = [t.for_http for t in normalized if t.for_http]
         dir_findings = run_directory_scan(dir_targets, timeout=5.0)
 
         write_markdown_report(
-            output_dir=Path("outputs"),
+            output_dir=output_dir,
             targets=normalized,
             profiles=[profile],
             ports_mode=ports_mode,
@@ -290,10 +378,12 @@ def _do_scan(target: str, profile: str, ports_mode: str) -> None:
         )
 
         scan_state["result"] = {
+            "command": " ".join(nmap_result.command),
             "hosts": [
                 {
                     "host": h.host,
                     "state": h.state,
+                    "os_matches": h.os_matches,
                     "open_ports": [
                         {
                             "port": p.port,
@@ -301,6 +391,7 @@ def _do_scan(target: str, profile: str, ports_mode: str) -> None:
                             "service": p.service,
                             "product": p.product,
                             "version": p.version,
+                            "scripts": [{"id": s.id, "output": s.output} for s in p.scripts],
                         }
                         for p in h.open_ports
                     ],

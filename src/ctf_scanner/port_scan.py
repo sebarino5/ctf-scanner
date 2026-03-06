@@ -4,7 +4,7 @@ import os
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -17,6 +17,12 @@ PROFILE_FLAGS: dict[str, list[str]] = {
 
 
 @dataclass
+class ScriptResult:
+    id: str
+    output: str
+
+
+@dataclass
 class PortResult:
     port: int
     protocol: str
@@ -24,6 +30,7 @@ class PortResult:
     service: str
     product: str | None
     version: str | None
+    scripts: list[ScriptResult] = field(default_factory=list)
 
 
 @dataclass
@@ -31,6 +38,7 @@ class HostResult:
     host: str
     state: str
     open_ports: list[PortResult]
+    os_matches: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -101,6 +109,11 @@ def parse_nmap_xml(xml_path: Path) -> list[HostResult]:
                 continue
 
             service = port.find("service")
+            scripts = [
+                ScriptResult(id=s.attrib.get("id", ""), output=s.attrib.get("output", ""))
+                for s in port.findall("script")
+                if s.attrib.get("id")
+            ]
             ports.append(
                 PortResult(
                     port=int(port.attrib.get("portid", "0")),
@@ -109,10 +122,17 @@ def parse_nmap_xml(xml_path: Path) -> list[HostResult]:
                     service=service.attrib.get("name", "unknown") if service is not None else "unknown",
                     product=service.attrib.get("product") if service is not None else None,
                     version=service.attrib.get("version") if service is not None else None,
+                    scripts=scripts,
                 )
             )
 
-        hosts.append(HostResult(host=host_id, state=state, open_ports=ports))
+        os_matches = [
+            f"{m.attrib['name']} ({m.attrib.get('accuracy', '?')}%)"
+            for m in host.findall("os/osmatch")
+            if m.attrib.get("name")
+        ]
+
+        hosts.append(HostResult(host=host_id, state=state, open_ports=ports, os_matches=os_matches))
 
     return hosts
 
@@ -133,6 +153,8 @@ def run_nmap_scan(
 
     command = ["nmap", "-oX", os.fspath(xml_path), "--open"]
     command.extend(_combined_profile_flags(profiles))
+    if "deep" in profiles and hasattr(os, "getuid") and os.getuid() == 0:
+        command.extend(["-O", "--osscan-guess"])
     command.extend(_build_port_flags(ports_mode, custom_ports))
     command.extend(targets)
 

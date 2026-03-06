@@ -3,6 +3,7 @@ from __future__ import annotations
 import ipaddress
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urlparse
 
 
@@ -88,6 +89,13 @@ def normalize_target(value: str) -> NormalizedTarget:
         return _normalize_ip_or_cidr(candidate)
     except ValueError:
         return _normalize_domain(candidate)
+
+
+def make_output_dir(base: Path, targets: list[NormalizedTarget]) -> Path:
+    """outputs/<sanitized-target>/  — z.B. outputs/10.10.10.5/ oder outputs/example.com/"""
+    name = "_".join(t.normalized for t in targets)
+    safe = re.sub(r"[^\w.\-]", "_", name).strip("_") or "scan"
+    return base / safe
 
 
 def normalize_targets(values: list[str]) -> list[NormalizedTarget]:

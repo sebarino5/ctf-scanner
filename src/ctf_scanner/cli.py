@@ -7,7 +7,7 @@ from pathlib import Path
 from .directory_scan import run_directory_scan
 from .port_scan import run_nmap_scan
 from .report_md import write_markdown_report
-from .target_normalization import normalize_targets
+from .target_normalization import normalize_targets, make_output_dir
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         parser.error(str(exc))
 
-    output_dir = Path(args.output_dir)
+    output_dir = make_output_dir(Path(args.output_dir), normalized_targets)
 
     try:
         nmap_result = run_nmap_scan(

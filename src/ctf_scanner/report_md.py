@@ -17,6 +17,11 @@ def _host_section(run_result: NmapRunResult) -> list[str]:
 
     for host in run_result.hosts:
         lines.append(f"### Host: `{host.host}` ({host.state})")
+
+        if host.os_matches:
+            lines.append(f"**OS Detection:** {' | '.join(host.os_matches)}")
+        lines.append("")
+
         if not host.open_ports:
             lines.append("Keine offenen Ports im gewaehlten Profil gefunden.")
             lines.append("")
@@ -28,6 +33,18 @@ def _host_section(run_result: NmapRunResult) -> list[str]:
             pv = " ".join([p for p in [port.product, port.version] if p]).strip() or "-"
             lines.append(f"| {port.port} | {port.protocol} | {port.service} | {pv} |")
         lines.append("")
+
+        scripts_found = [s for port in host.open_ports for s in port.scripts]
+        if scripts_found:
+            lines.append("#### Script Ergebnisse")
+            lines.append("")
+            for port in sorted(host.open_ports, key=lambda p: p.port):
+                for script in port.scripts:
+                    lines.append(f"**{port.port}/{port.protocol} — {script.id}:**")
+                    lines.append("```")
+                    lines.append(script.output.strip())
+                    lines.append("```")
+                    lines.append("")
 
     return lines
 
