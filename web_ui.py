@@ -22,7 +22,7 @@ scan_state: dict = {"running": False, "result": None, "error": None}
 
 HTML = """
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -343,7 +343,7 @@ function copyCommand() {
     const btn = document.getElementById('copyBtn');
     btn.textContent = 'Copied!';
     btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = 'Kopieren'; btn.classList.remove('copied'); }, 2000);
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
   });
 }
 
