@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -148,7 +148,7 @@ def run_nmap_scan(
         raise RuntimeError("nmap wurde nicht gefunden. Bitte nmap installieren und erneut ausfuehren.")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     xml_path = output_dir / f"nmap_{timestamp}.xml"
 
     command = ["nmap", "-oX", os.fspath(xml_path), "--open"]

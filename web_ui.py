@@ -4,6 +4,8 @@ import sys
 import threading
 from pathlib import Path
 
+_scan_lock = threading.Lock()
+
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from flask import Flask, render_template_string, request, jsonify
@@ -305,7 +307,7 @@ function renderResults(result) {
         if (allScripts.length > 0) {
           portHtml += '<div class="scripts-section">';
           for (const s of allScripts) {
-            portHtml += `<p class="script-header">${s.port}/${esc(s.proto)} &mdash; ${esc(s.id)}</p>`;
+            portHtml += `<p class="script-header">${s.port}/${esc(s.proto)} - ${esc(s.id)}</p>`;
             portHtml += `<pre class="script-output">${esc(s.output)}</pre>`;
           }
           portHtml += '</div>';
@@ -422,8 +424,6 @@ def index():
 
 @app.route("/scan", methods=["POST"])
 def scan():
-    if scan_state["running"]:
-        return jsonify({"error": "Scan laeuft bereits."})
 
     data = request.get_json()
     target = (data.get("target") or "").strip()
@@ -432,10 +432,17 @@ def scan():
 
     if not target:
         return jsonify({"error": "Kein Ziel angegeben."})
+    if profile not in ("quick", "balanced", "deep"):
+        return jsonify({"error": "Invalid profile."})
+    if ports_mode not in ("top100", "top1000", "full"):
+        return jsonify({"error": "Invalid ports_mode."})
 
-    scan_state["running"] = True
-    scan_state["result"] = None
-    scan_state["error"] = None
+    with _scan_lock:
+        if scan_state["running"]:
+            return jsonify({"error": "Scan laeuft bereits."})
+        scan_state["running"] = True
+        scan_state["result"] = None
+        scan_state["error"] = None
 
     thread = threading.Thread(target=_do_scan, args=(target, profile, ports_mode), daemon=True)
     thread.start()

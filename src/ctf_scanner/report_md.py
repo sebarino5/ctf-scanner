@@ -40,7 +40,7 @@ def _host_section(run_result: NmapRunResult) -> list[str]:
             lines.append("")
             for port in sorted(host.open_ports, key=lambda p: p.port):
                 for script in port.scripts:
-                    lines.append(f"**{port.port}/{port.protocol} — {script.id}:**")
+                    lines.append(f"**{port.port}/{port.protocol} - {script.id}:**")
                     lines.append("```")
                     lines.append(script.output.strip())
                     lines.append("```")
