@@ -57,9 +57,9 @@ def _build_port_flags(ports_mode: str, custom_ports: str | None) -> list[str]:
         return ["-p-"]
     if ports_mode == "custom":
         if not custom_ports:
-            raise ValueError("Bei ports-mode 'custom' muss --ports gesetzt sein.")
+            raise ValueError("ports-mode 'custom' requires --ports to be set.")
         return ["-p", custom_ports]
-    raise ValueError(f"Unbekannter ports-mode: {ports_mode}")
+    raise ValueError(f"Unknown ports-mode: {ports_mode}")
 
 
 def _dedupe_keep_order(items: list[str]) -> list[str]:
@@ -145,7 +145,7 @@ def run_nmap_scan(
     output_dir: Path,
 ) -> NmapRunResult:
     if shutil.which("nmap") is None:
-        raise RuntimeError("nmap wurde nicht gefunden. Bitte nmap installieren und erneut ausfuehren.")
+        raise RuntimeError("nmap not found. Please install nmap and try again.")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -160,8 +160,8 @@ def run_nmap_scan(
 
     completed = subprocess.run(command, capture_output=True, text=True)
     if completed.returncode != 0:
-        stderr = completed.stderr.strip() or completed.stdout.strip() or "Unbekannter Fehler"
-        raise RuntimeError(f"nmap Scan fehlgeschlagen: {stderr}")
+        stderr = completed.stderr.strip() or completed.stdout.strip() or "Unknown error"
+        raise RuntimeError(f"nmap scan failed: {stderr}")
 
     hosts = parse_nmap_xml(xml_path)
     return NmapRunResult(xml_path=xml_path, command=command, hosts=hosts)

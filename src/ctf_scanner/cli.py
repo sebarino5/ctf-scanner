@@ -14,42 +14,42 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ctf-scanner",
         description=(
-            "Automatisierter Scanner fuer autorisierte CTF-Ziele oder eigene Systeme. "
-            "Keine Exploits, kein Brute Force."
+            "Automated scanner for authorized CTF targets or your own systems. "
+            "No exploits, no brute force."
         ),
     )
 
     parser.add_argument(
         "targets",
         nargs="+",
-        help="Ziele als Domain, IP, URL oder CIDR",
+        help="Targets as domain, IP, URL or CIDR",
     )
     parser.add_argument(
         "--profile",
         action="append",
         choices=["quick", "balanced", "deep"],
-        help="Portscan-Profil (mehrfach kombinierbar)",
+        help="Port scan profile (can be combined multiple times)",
     )
     parser.add_argument(
         "--ports-mode",
         default="top1000",
         choices=["top100", "top1000", "full", "custom"],
-        help="Port-Auswahl fuer Nmap",
+        help="Port selection for Nmap",
     )
     parser.add_argument(
         "--ports",
-        help="Custom Ports, z.B. '22,80,443,8000-8100' (nur mit --ports-mode custom)",
+        help="Custom ports, e.g. '22,80,443,8000-8100' (only with --ports-mode custom)",
     )
     parser.add_argument(
         "--output-dir",
         default="outputs",
-        help="Ausgabeordner fuer Markdown-Report und Nmap XML",
+        help="Output directory for Markdown report and Nmap XML",
     )
     parser.add_argument(
         "--dir-timeout",
         type=float,
         default=5.0,
-        help="Timeout pro HTTP Request beim Directory Scan in Sekunden",
+        help="Timeout per HTTP request during directory scan in seconds",
     )
 
     return parser
@@ -62,9 +62,9 @@ def main(argv: list[str] | None = None) -> int:
     profiles = args.profile or ["balanced"]
 
     if args.ports_mode != "custom" and args.ports:
-        parser.error("--ports darf nur zusammen mit --ports-mode custom verwendet werden")
+        parser.error("--ports can only be used together with --ports-mode custom")
     if args.ports_mode == "custom" and not args.ports:
-        parser.error("--ports-mode custom benoetigt --ports")
+        parser.error("--ports-mode custom requires --ports")
 
     try:
         normalized_targets = normalize_targets(args.targets)
@@ -95,10 +95,10 @@ def main(argv: list[str] | None = None) -> int:
             dir_findings=dir_findings,
         )
     except Exception as exc:  # pragma: no cover
-        print(f"Fehler: {exc}", file=sys.stderr)
+        print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Scan abgeschlossen. Markdown: {report_path}")
+    print(f"Scan complete. Markdown: {report_path}")
     print(f"Nmap XML: {nmap_result.xml_path}")
     return 0
 

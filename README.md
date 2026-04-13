@@ -1,11 +1,11 @@
 # ctf-scanner
 
-Python tool for automated, defensive scans on **authorized CTF targets or own systems**.
+Python tool for automated, defensive scans on **authorized CTF targets or your own systems**.
 
 - No exploits
 - No brute force
 - Nmap as port scan wrapper
-- Directory scan with standard wordlist
+- Directory scan with default wordlist
 - Web interface in the browser
 - Output as Markdown + Nmap XML in the `outputs/` folder
 
@@ -31,14 +31,14 @@ source .venv/bin/activate
 python web_ui.py
 ```
 
-Open browser: **http://127.0.0.1:5000**
+Open in browser: **http://127.0.0.1:5000**
 
 ## Usage
 
 1. Enter target (IP, domain or URL)
 2. Choose profile: `quick`, `balanced` or `deep`
 3. Choose port mode: `Top 100`, `Top 1000` or `Full`
-4. Start scan — results appear directly in the browser
+4. Start scan, results appear directly in the browser
 
 ## Scan Profiles
 
@@ -65,12 +65,12 @@ Each scan creates the following files in `outputs/`:
 
 ## CLI (optional)
 
-The scanner can also be used directly via the command line:
+The scanner can also be used directly from the command line:
 
 ```bash
-IYTHONPATH=src python -m ctf_scanner --help
+PYTHONPATH=src python -m ctf_scanner --help
 ```
 
 ## Legal
 
-This tool may **only be used on systems for which explicit authorization exists** (own systems, CTF challenges). Any other use is illegal.
+This tool may **only be used on systems for which explicit authorization exists** (your own systems, CTF challenges). Any other use is illegal.

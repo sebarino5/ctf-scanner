@@ -200,15 +200,15 @@ HTML = """
 </head>
 <body>
   <h1>&#9760; CTF Scanner</h1>
-  <p class="subtitle">Nur fuer autorisierte CTF-Ziele und eigene Systeme</p>
+  <p class="subtitle">Authorized CTF targets and your own systems only</p>
 
   <div class="card">
-    <label>Ziel (IP, Domain oder URL)</label>
-    <input type="text" id="target" placeholder="z.B. 10.10.10.10 oder example.com" />
+    <label>Target (IP, domain or URL)</label>
+    <input type="text" id="target" placeholder="e.g. 10.10.10.10 or example.com" />
 
     <div class="row">
       <div class="group">
-        <label>Profil</label>
+        <label>Profile</label>
         <select id="profile">
           <option value="quick">quick</option>
           <option value="balanced" selected>balanced</option>
@@ -225,21 +225,21 @@ HTML = """
       </div>
     </div>
 
-    <button id="scanBtn" onclick="startScan()">Scan starten</button>
+    <button id="scanBtn" onclick="startScan()">Start Scan</button>
     <div id="status"></div>
   </div>
 
   <div class="card" id="results">
-    <div class="section-title">Verwendeter Befehl</div>
+    <div class="section-title">Command Used</div>
     <div class="cmd-box">
       <span class="cmd-text" id="cmdText"></span>
-      <button class="copy-btn" id="copyBtn" onclick="copyCommand()">Kopieren</button>
+      <button class="copy-btn" id="copyBtn" onclick="copyCommand()">Copy</button>
     </div>
 
     <div class="section-title" style="margin-top:1.2rem">Port Scan</div>
     <div id="portResults"></div>
 
-    <div class="section-title" style="margin-top:1.2rem">Directory Scan</div>
+    <div class="section-title" style="margin-top:1.2rem">Directory Scan Results</div>
     <div id="dirResults"></div>
   </div>
 
@@ -248,31 +248,31 @@ let pollInterval = null;
 
 function startScan() {
   const target = document.getElementById('target').value.trim();
-  if (!target) { setStatus('Bitte ein Ziel eingeben.'); return; }
+  if (!target) { setStatus('Please enter a target.'); return; }
 
   const profile = document.getElementById('profile').value;
   const ports_mode = document.getElementById('ports_mode').value;
 
   document.getElementById('scanBtn').disabled = true;
   document.getElementById('results').style.display = 'none';
-  setStatus('Scan laeuft...');
+  setStatus('Scan running...');
 
   fetch('/scan', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({target, profile, ports_mode})
   }).then(r => r.json()).then(data => {
-    if (data.error) { setStatus('Fehler: ' + data.error); re(); return; }
+    if (data.error) { setStatus('Error: ' + data.error); re(); return; }
     pollInterval = setInterval(pollStatus, 2000);
-  }).catch(e => { setStatus('Fehler: ' + e); re(); });
+  }).catch(e => { setStatus('Error: ' + e); re(); });
 }
 
 function pollStatus() {
   fetch('/status').then(r => r.json()).then(data => {
-    if (data.running) { setStatus('Scan laeuft... (Nmap kann etwas dauern)'); return; }
+    if (data.running) { setStatus('Scan running... (Nmap may take a while)'); return; }
     clearInterval(pollInterval);
-    if (data.error) { setStatus('Fehler: ' + data.error); re(); return; }
-    setStatus('Scan abgeschlossen.');
+    if (data.error) { setStatus('Error: ' + data.error); re(); return; }
+    setStatus('Scan complete.');
     renderResults(data.result);
     re();
   });
@@ -286,7 +286,7 @@ function renderResults(result) {
   // Port results
   let portHtml = '';
   if (!result.hosts || result.hosts.length === 0) {
-    portHtml = '<p class="empty">Keine Hosts gefunden.</p>';
+    portHtml = '<p class="empty">No hosts found.</p>';
   } else {
     for (const host of result.hosts) {
       portHtml += `<p class="host-header">Host: ${esc(host.host)} <span class="badge open">${esc(host.state)}</span></p>`;
@@ -294,9 +294,9 @@ function renderResults(result) {
         portHtml += host.os_matches.map(o => `<span class="os-badge">OS: ${esc(o)}</span>`).join(' ');
       }
       if (!host.open_ports || host.open_ports.length === 0) {
-        portHtml += '<p class="empty">Keine offenen Ports gefunden.</p>';
+        portHtml += '<p class="empty">No open ports found.</p>';
       } else {
-        portHtml += '<table><tr><th>Port</th><th>Proto</th><th>Service</th><th>Produkt/Version</th></tr>';
+        portHtml += '<table><tr><th>Port</th><th>Proto</th><th>Service</th><th>Product/Version</th></tr>';
         for (const p of host.open_ports) {
           const pv = esc([p.product, p.version].filter(Boolean).join(' ') || '-');
           portHtml += `<tr><td>${p.port}</td><td>${esc(p.protocol)}</td><td>${esc(p.service)}</td><td>${pv}</td></tr>`;
@@ -320,7 +320,7 @@ function renderResults(result) {
   // Directory results
   let dirHtml = '';
   if (!result.dir_findings || result.dir_findings.length === 0) {
-    dirHtml = '<p class="empty">Keine auffaelligen Pfade gefunden.</p>';
+    dirHtml = '<p class="empty">No interesting paths found.</p>';
   } else {
     dirHtml = '<table><tr><th>URL</th><th>Status</th><th>Redirect</th></tr>';
     for (const f of result.dir_findings) {
@@ -341,7 +341,7 @@ function copyCommand() {
   const text = document.getElementById('cmdText').textContent;
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('copyBtn');
-    btn.textContent = 'Kopiert!';
+    btn.textContent = 'Copied!';
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = 'Kopieren'; btn.classList.remove('copied'); }, 2000);
   });
@@ -431,7 +431,7 @@ def scan():
     ports_mode = data.get("ports_mode", "top1000")
 
     if not target:
-        return jsonify({"error": "Kein Ziel angegeben."})
+        return jsonify({"error": "No target specified."})
     if profile not in ("quick", "balanced", "deep"):
         return jsonify({"error": "Invalid profile."})
     if ports_mode not in ("top100", "top1000", "full"):
@@ -439,7 +439,7 @@ def scan():
 
     with _scan_lock:
         if scan_state["running"]:
-            return jsonify({"error": "Scan laeuft bereits."})
+            return jsonify({"error": "Scan already running."})
         scan_state["running"] = True
         scan_state["result"] = None
         scan_state["error"] = None
@@ -460,5 +460,5 @@ def status():
 
 
 if __name__ == "__main__":
-    print("CTF Scanner UI: http://127.0.0.1:5000")
+    print("CTF Scanner UI running at http://127.0.0.1:5000")
     app.run(debug=False, host="127.0.0.1", port=5000)

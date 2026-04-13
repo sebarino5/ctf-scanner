@@ -22,10 +22,10 @@ class NormalizedTarget:
 def _normalize_url(value: str) -> NormalizedTarget:
     parsed = urlparse(value)
     if not parsed.scheme or not parsed.netloc:
-        raise ValueError(f"Ungueltige URL: {value}")
+        raise ValueError(f"Invalid URL: {value}")
     host = parsed.hostname
     if not host:
-        raise ValueError(f"Ungueltige URL ohne Host: {value}")
+        raise ValueError(f"Invalid URL without host: {value}")
     path = parsed.path or "/"
     base = f"{parsed.scheme}://{host}"
     return NormalizedTarget(
@@ -60,13 +60,13 @@ def _normalize_ip_or_cidr(value: str) -> NormalizedTarget:
             for_http=None,
         )
     except ValueError:
-        raise ValueError(f"Ungueltiges IP/CIDR Ziel: {value}") from None
+        raise ValueError(f"Invalid IP/CIDR target: {value}") from None
 
 
 def _normalize_domain(value: str) -> NormalizedTarget:
     candidate = value.strip().lower()
     if not DOMAIN_RE.match(candidate):
-        raise ValueError(f"Ungueltige Domain: {value}")
+        raise ValueError(f"Invalid domain: {value}")
     domain = candidate.rstrip(".")
     return NormalizedTarget(
         raw=value,
@@ -80,7 +80,7 @@ def _normalize_domain(value: str) -> NormalizedTarget:
 def normalize_target(value: str) -> NormalizedTarget:
     candidate = value.strip()
     if not candidate:
-        raise ValueError("Leeres Ziel ist nicht erlaubt")
+        raise ValueError("Empty target is not allowed")
 
     if "://" in candidate:
         return _normalize_url(candidate)
@@ -92,7 +92,7 @@ def normalize_target(value: str) -> NormalizedTarget:
 
 
 def make_output_dir(base: Path, targets: list[NormalizedTarget]) -> Path:
-    """outputs/<sanitized-target>/  — z.B. outputs/10.10.10.5/ oder outputs/example.com/"""
+    """outputs/<sanitized-target>/  e.g. outputs/10.10.10.5/ or outputs/example.com/"""
     name = "_".join(t.normalized for t in targets)
     safe = re.sub(r"[^\w.\-]", "_", name).strip("_") or "scan"
     return base / safe

@@ -39,7 +39,7 @@ class DirectoryFinding:
 def _base_url(raw_url: str) -> str:
     parsed = urlparse(raw_url)
     if not parsed.scheme or not parsed.netloc:
-        raise ValueError(f"Ungueltige Basis-URL fuer Directory Scan: {raw_url}")
+        raise ValueError(f"Invalid base URL for directory scan: {raw_url}")
     return f"{parsed.scheme}://{parsed.netloc}/"
 
 
